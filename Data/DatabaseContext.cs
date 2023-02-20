@@ -12,11 +12,11 @@ namespace MigrationScripTest.Data
         }
 
         //public DbSet<Blog> Blogs => Set<Blog>();
-        public DbSet<Blog> Blogs { get; set; }
-        public DbSet<ExpenseByTotal> ExpenseTotals { get; set; }
+        public DbSet<Blog> Blog { get; set; }
+        //public DbSet<ExpenseByTotal> ExpenseTotals { get; set; }
         public DbSet<ExpenseItem> ExpenseItems { get; set; }
         public DbSet<ExpenseHistory> ExpenseHistory { get; set; }
-        //public DbSet<ExpenseByTotal> ExpenseTotalViews { get; set; }
+        public DbSet<ExpenseByTotal> ExpenseTotal { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -39,6 +39,7 @@ namespace MigrationScripTest.Data
                .Entity<ExpenseByTotal>()
                .ToView("ExpenseByTotalView")
                .HasKey(t => t.Id);
+
             modelBuilder.Entity<ExpenseItem>().HasData(
                 new ExpenseItem() { Id = 1, Name = "Ferrari", Category = "Big Expense" },
                 new ExpenseItem() { Id = 2, Name = "Cheese", Category = "Small Expense" },

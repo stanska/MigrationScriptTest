@@ -1,4 +1,4 @@
-# [Sample Code First DB Schema Migration](https://learn.microsoft.com/en-us/ef/core/managing-schemas/)
+﻿# [Sample Code First DB Schema Migration](https://learn.microsoft.com/en-us/ef/core/managing-schemas/)
 EF Core provides two primary ways of keeping your EF Core model and database schema in sync.
 
 1. If you want your EF Core model to be the source of truth, use Migrations. As you make changes to your EF Core model, this approach incrementally applies the corresponding schema changes to your database so that it remains compatible with your EF Core model.
@@ -31,20 +31,31 @@ dotnet ef migrations add InitialCreate
 dotnet ef migrations list
 dotnet ef migrations --help
 ```
-The name of the migration can correspon to a related feature.
-Along with the apply changes migration, rollback migration will also be generated.
+
 Migrations are generated in Migrations solution subfolder.
+* **YYYYMMDDhhmmss_MigrationName.cs** - The migration file наме is prefixed with time  – which signifies the time at which this migration was created.
+With any migration, aditional Designer file is created.
+This is a file which contains two methods – Up and Down.
+
+Up method contains code which would modify database and apply the new changes
+Down method contains code which would rollback the new changes from database
+
+* **20230220142413_CreateView_ExpenseTota** - The migrations metadata file. Contains information used by EF.
+* **YYYYMMDDhhmmss_MigrationName.Designer.cs** - The migrations metadata file. Contains information used by EF.
+* **UniversityContextModelSnapshot** - The snapshot of your current model. This file is used to determine what changed when adding the next migration.
 
 ref: https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli
+ref: https://thecodeblogger.com/2021/07/24/know-everything-about-net-ef-core-migrations/
 
+You can fine tune the table/column properties by the [entity attributes](https://learn.microsoft.com/en-us/ef/core/modeling/entity-properties?tabs=data-annotations%2Cwithout-nrt).
 #### Create/Alter View
 Views cannot be infered by entites, but they can fit in the migration scripts. First you need to add a new migration
 
 ```powershell
-dotnet ef migrations add EditView
+dotnet ef migrations add CreateView_ExpenseTotal
 ```
 
-Then edit the [up](./Migrations/20230220093131_EditView.cs) method to create/alter the view. 
+Then edit the [up](./Migrations/20230220142413_CreateView_ExpenseTotal.cs) method to create/alter the view. 
 
 
 The OnModelCreating can be overriden to further configure the model that was discovered by convention from the entity types exposed in DbSet<TEntity> properties on your derived context. 
@@ -56,6 +67,19 @@ In DatabaseContext, edit OnModelCreating to create the View.
                .ToView("ExpenseByTotalView")
                .HasKey(t => t.Id);
 ```
+
+### Naming Convention
+When you are creating a migration be mindful about the name you give for the migration.
+It would be great if you can maintain a naming convention in your projects for migrations such as,
+
+If you are adding a new table — CreateTable_Blog
+If you are rename Name a column to BlogName — _AlterTable_RenameName_To_BlogName
+If you are adding more than one table, the name of the feature or some other composite name can be used — CreateTable_ExpenseHistory_ExpenseItem
+If you are adding a new column NewColumn to a table Blog — AlterTable_Blog_AddColumn_NewColumn
+If you are adding a view - CreateView_ExpenseTotal
+If you are alter a view - AlterView_ExpenseTotal_StaticColumn
+If you are seeding data — SeedData_Add_ExpenseItems
+If you are running a SQL upload script — {timestamp}_uploadScript
 #### Seed Data in Entity Framework Core
 In most of our projects, we want to have some initial data in the created database. So as soon as we execute our migration files to create and configure the database, we want to populate it with some initial data. This action is called Data Seeding.
 
@@ -69,7 +93,7 @@ We can create the code for the seeding action in the OnModelCreating method by u
                 );
 ```
 
-After running the add migrtion command we will [have a new migration cs](./Migrations/20230220130457_DataSeed.cs) file with the new inserts in the up method(and corresponging delete in the down method).
+After running the add migrtion command we will [have a new migration cs](./Migrations/20230220144056_SeedData_Add_ExpenseItems.cs) file with the new inserts in the up method(and corresponging delete in the down method).
 For ex:
 ```csharp
             migrationBuilder.InsertData(
@@ -124,6 +148,10 @@ GO
 
 ```
 Ref: https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli
+
+### Migration Reviews
+The migration scripts can be reviewed in the pull request. With any migration cs file, a designer cs file is created.
+Though
 
 ### Using a Separate Migrations Project
 
