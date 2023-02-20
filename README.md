@@ -1,4 +1,4 @@
-﻿# [Sample Code First DB Schema Migration](https://learn.microsoft.com/en-us/ef/core/managing-schemas/)
+﻿# [Code First DB Schema Migration - Playground](https://learn.microsoft.com/en-us/ef/core/managing-schemas/)
 EF Core provides two primary ways of keeping your EF Core model and database schema in sync.
 
 1. If you want your EF Core model to be the source of truth, use Migrations. As you make changes to your EF Core model, this approach incrementally applies the corresponding schema changes to your database so that it remains compatible with your EF Core model.
@@ -27,7 +27,7 @@ In the sample project, you can test that feature by changing the Blog entity.
 After code changes are finalized, the following command will generated a migration script.
 
 ```powershell
-dotnet ef migrations add InitialCreate
+dotnet ef migrations add CreateTable_Blog
 dotnet ef migrations list
 dotnet ef migrations --help
 ```
@@ -40,9 +40,9 @@ This is a file which contains two methods – Up and Down.
 Up method contains code which would modify database and apply the new changes
 Down method contains code which would rollback the new changes from database
 
-* **20230220142413_CreateView_ExpenseTota** - The migrations metadata file. Contains information used by EF.
+* **20230220142413_CreateView_ExpenseTotal** - The migrations metadata file. Contains information used by EF.
 * **YYYYMMDDhhmmss_MigrationName.Designer.cs** - The migrations metadata file. Contains information used by EF.
-* **UniversityContextModelSnapshot** - The snapshot of your current model. This file is used to determine what changed when adding the next migration.
+* [**UniversityContextModelSnapshot**](./Migrations/DatabaseContextModelSnapshot.cs) - The snapshot of your current model. This file is used to determine what changed when adding the next migration.
 
 ref: https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli
 ref: https://thecodeblogger.com/2021/07/24/know-everything-about-net-ef-core-migrations/
@@ -72,14 +72,14 @@ In DatabaseContext, edit OnModelCreating to create the View.
 When you are creating a migration be mindful about the name you give for the migration.
 It would be great if you can maintain a naming convention in your projects for migrations such as,
 
-If you are adding a new table — CreateTable_Blog
-If you are rename Name a column to BlogName — _AlterTable_RenameName_To_BlogName
-If you are adding more than one table, the name of the feature or some other composite name can be used — CreateTable_ExpenseHistory_ExpenseItem
-If you are adding a new column NewColumn to a table Blog — AlterTable_Blog_AddColumn_NewColumn
-If you are adding a view - CreateView_ExpenseTotal
-If you are alter a view - AlterView_ExpenseTotal_StaticColumn
-If you are seeding data — SeedData_Add_ExpenseItems
-If you are running a SQL upload script — {timestamp}_uploadScript
++ If you are adding a new table — CreateTable_Blog
++ If you are rename Name a column to BlogName — _AlterTable_RenameName_To_BlogName
++ If you are adding more than one table, the name of the feature or some other composite name can be used — CreateTable_ExpenseHistory_ExpenseItem
++ If you are adding a new column NewColumn to a table Blog — AlterTable_Blog_AddColumn_NewColumn
++ If you are adding a view - CreateView_ExpenseTotal
++ If you are alter a view - AlterView_ExpenseTotal_StaticColumn
++ If you are seeding data — SeedData_Add_ExpenseItems
++ If you are running a SQL upload script — {timestamp}_uploadScript
 #### Seed Data in Entity Framework Core
 In most of our projects, we want to have some initial data in the created database. So as soon as we execute our migration files to create and configure the database, we want to populate it with some initial data. This action is called Data Seeding.
 
@@ -125,8 +125,8 @@ SQL scripts can be provided to a DBA, and can be managed and archived separately
 
 ```powershell
 dotnet ef migrations script  --idempotent
-dotnet ef migrations script  --idempotent CreateView
-dotnet ef migrations script  --idempotent RenameLast CreateView -o deployToIntegration.sql
+dotnet ef migrations script  --idempotent CreateView_ExpenseTotal
+dotnet ef migrations script  --idempotent CreateView_ExpenseTotal AlterView_ExpenseTotal_StaticColumn -o deployToIntegration.sql
 ```
 
 **Idempotent scripts** will internally check which migrations have already been applied and apply only the missing ones.
@@ -136,10 +136,24 @@ For example the check if not exists syntax below.
 BEGIN TRANSACTION;
 GO
 
-IF NOT EXISTS(SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20230217143605_RenameLast1')
+IF NOT EXISTS(SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20230220142747_AlterView_ExpenseTotal_StaticColumn')
+BEGIN
+    CREATE OR ALTER VIEW ExpenseByTotalView AS
+                   SELECT p.Id,
+                          p.Name,
+                          p.Category,
+                          sum(h.Amount) AS TotalAmount,
+                          'a new column' as StaticColumn
+                     FROM ExpenseItems p
+                   JOIN ExpenseHistory h ON p.Id = h.ExpenseItemId
+                   GROUP BY p.Id, p.Name, p.Category
+END;
+GO
+
+IF NOT EXISTS(SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20230220142747_AlterView_ExpenseTotal_StaticColumn')
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20230217143605_RenameLast1', N'7.0.3');
+    VALUES (N'20230220142747_AlterView_ExpenseTotal_StaticColumn', N'7.0.3');
 END;
 GO
 
@@ -150,11 +164,15 @@ GO
 Ref: https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli
 
 ### Migration Reviews
-The migration scripts can be reviewed in the pull request. With any migration cs file, a designer cs file is created.
-Though
+The migration scripts can be reviewed in the pull request. 
 
 ### Using a Separate Migrations Project
 
-This approach may have several pros as DB is migrated only if a change to the migration scripts is done.
+This approach may have several pros as DB is migrated only if a change to the migration scripts is done. 
+Also, it keeps the application code base clean from migration details.
 
 https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/projects?tabs=dotnet-core-cli
+
+### Reset migration script
+If Migrations scripts number increases too much, the migration starting point can be reset.
+Ref: https://weblog.west-wind.com/posts/2016/jan/13/resetting-entity-framework-migrations-to-a-clean-slate
